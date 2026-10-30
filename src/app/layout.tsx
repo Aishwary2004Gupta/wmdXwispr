@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "OmniSync | Your social workspace",
-  description: "Organize social profile links, draft posts, and preview every destination from one calm workspace.",
+  title: "TidyDrop | Your folders, in order",
+  description: "Sort a folder by file type with a private preview-first organizer. Files stay on your device.",
 };
 
 export default function RootLayout({

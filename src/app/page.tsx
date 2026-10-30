@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import {
   Archive, ArrowRight, Check, CheckCircle2, ChevronRight, CircleAlert, Clock3, Code2,
   File, FileImage, FileSpreadsheet, FileText, Film, Folder, FolderOpen, HardDrive,
-  Image, LoaderCircle, LockKeyhole, MoreHorizontal, Music2, Package, Presentation,
+  Image as ImageIcon, LoaderCircle, LockKeyhole, MoreHorizontal, Music2, Package, Presentation,
   RotateCcw, ScanSearch, ShieldCheck, Sparkles, X,
 } from "lucide-react";
 import {
@@ -28,11 +28,11 @@ interface Notice {
 }
 
 interface FolderPickerWindow extends Window {
-  showDirectoryPicker?: (options: { id: string; mode: "readwrite" }) => Promise<DirectoryHandle>;
+  showDirectoryPicker?: (options: { id: string; mode: "readwrite"; startIn: "downloads" }) => Promise<DirectoryHandle>;
 }
 
-const CATEGORY_STYLE: Record<CategoryId, { icon: typeof Image; tint: string }> = {
-  images: { icon: Image, tint: "mint" },
+const CATEGORY_STYLE: Record<CategoryId, { icon: typeof ImageIcon; tint: string }> = {
+  images: { icon: ImageIcon, tint: "mint" },
   documents: { icon: FileText, tint: "lavender" },
   spreadsheets: { icon: FileSpreadsheet, tint: "lemon" },
   presentations: { icon: Presentation, tint: "peach" },
@@ -50,18 +50,24 @@ function getExtension(name: string) {
 }
 
 async function readFolder(directory: DirectoryHandle): Promise<ScannedFile[]> {
-  const files: ScannedFile[] = [];
+  const handles: FileHandle[] = [];
   for await (const entry of directory.values()) {
-    if (entry.kind !== "file") continue;
-    const file = await entry.getFile();
-    files.push({
-      id: `${entry.name}:${file.lastModified}:${files.length}`,
-      name: entry.name,
-      extension: getExtension(entry.name),
-      categoryId: classifyFileName(entry.name),
-      size: file.size,
-      handle: entry,
-    });
+    if (entry.kind === "file") handles.push(entry);
+  }
+  const files: ScannedFile[] = [];
+  for (let offset = 0; offset < handles.length; offset += 64) {
+    const batch = await Promise.all(handles.slice(offset, offset + 64).map(async (handle, index) => {
+      const file = await handle.getFile();
+      return {
+        id: `${handle.name}:${file.lastModified}:${offset + index}`,
+        name: handle.name,
+        extension: getExtension(handle.name),
+        categoryId: classifyFileName(handle.name),
+        size: file.size,
+        handle,
+      } satisfies ScannedFile;
+    }));
+    files.push(...batch);
   }
   return files.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 }
@@ -122,7 +128,7 @@ export default function Home() {
       return;
     }
     try {
-      const chosen = await browserWindow.showDirectoryPicker({ id: "tidydrop-folder", mode: "readwrite" });
+      const chosen = await browserWindow.showDirectoryPicker({ id: "tidydrop-folder", mode: "readwrite", startIn: "downloads" });
       await scanFolder(chosen);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") return;
@@ -165,7 +171,7 @@ export default function Home() {
       } catch (error) {
         failed.push(`${file.name}: ${errorText(error)}`);
       }
-      setSortProgress(index + 1);
+      if (index % 10 === 0 || index + 1 === sourceFiles.length) setSortProgress(index + 1);
     }
 
     setUndoMoves(moved);
@@ -194,6 +200,7 @@ export default function Home() {
     const records = [...undoMoves].reverse();
     let restored = 0;
     const failed: string[] = [];
+    const stillPending: FileMoveRecord[] = [];
     for (const record of records) {
       try {
         const file = await record.destinationDirectory.getFileHandle(record.destinationName);
@@ -204,9 +211,11 @@ export default function Home() {
         restored += 1;
       } catch (error) {
         failed.push(`${record.destinationName}: ${errorText(error)}`);
+        stillPending.push(record);
       }
     }
-    setUndoMoves([]);
+    setUndoMoves(stillPending);
+    if (stillPending.length === 0) setSortResult(null);
     if (directory) {
       try { setFiles(await readFolder(directory)); } catch { /* Keep the last visible scan if access has changed. */ }
     }
@@ -223,7 +232,7 @@ export default function Home() {
       <header className="topbar">
         <a className="brand" href="#top" aria-label="TidyDrop home"><span className="brand-mark"><FolderOpen size={21} /></span><span>TidyDrop</span></a>
         <nav className="topbar-actions" aria-label="Main navigation">
-          <a className="privacy-pill" href="#how-it-works"><ShieldCheck size={15} /> Files stay on your device</a>
+          <span className="privacy-pill"><ShieldCheck size={15} /> Files stay on your device</span>
           <button type="button" className="button button-primary button-header" onClick={chooseFolder} disabled={isScanning || isSorting}><Folder size={16} /> {directory ? "Change folder" : "Choose a folder"}</button>
         </nav>
       </header>
@@ -244,7 +253,7 @@ export default function Home() {
         <div className="hero-art" aria-hidden="true">
           <div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" />
           <div className="art-folder"><FolderOpen size={84} strokeWidth={1.15} /></div>
-          <div className="art-file art-file-image"><Image size={18} /><span /></div>
+          <div className="art-file art-file-image"><ImageIcon size={18} /><span /></div>
           <div className="art-file art-file-doc"><FileText size={18} /><span /></div>
           <div className="art-file art-file-video"><Film size={18} /><span /></div>
           <div className="art-spark spark-a">✳</div><div className="art-spark spark-b">✳</div>
