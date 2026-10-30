@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
 import {
+  Activity,
   ArrowRightLeft,
   CloudLightning,
   Layers,
@@ -11,9 +11,11 @@ import {
   Sparkles,
 } from "lucide-react";
 
+type AppTab = "matrix" | "composer" | "cardStudio" | "ledger";
+
 interface HeaderProps {
-  activeTab: "matrix" | "composer" | "cardStudio" | "ledger";
-  setActiveTab: (tab: "matrix" | "composer" | "cardStudio" | "ledger") => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   onOpenSimulate: () => void;
   onOpenDeployGuide: () => void;
   accountCount: number;
@@ -21,6 +23,13 @@ interface HeaderProps {
   loopBlockedCount: number;
   onOpenConnectModal?: () => void;
 }
+
+const tabs: { id: AppTab; label: string; icon: typeof ArrowRightLeft }[] = [
+  { id: "matrix", label: "Profiles & routes", icon: ArrowRightLeft },
+  { id: "composer", label: "Post preview", icon: Layers },
+  { id: "cardStudio", label: "Card studio", icon: Sparkles },
+  { id: "ledger", label: "Activity", icon: Activity },
+];
 
 export default function Header({
   activeTab,
@@ -33,161 +42,78 @@ export default function Header({
   onOpenConnectModal,
 }: HeaderProps) {
   return (
-    <header style={{ marginBottom: "2.25rem", paddingTop: "1.25rem" }}>
-      {/* Top Engine Status Command Pill */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0.55rem 1.25rem",
-          background: "rgba(15, 19, 30, 0.75)",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
-          borderRadius: "var(--radius-full)",
-          marginBottom: "1.75rem",
-          fontSize: "0.825rem",
-          backdropFilter: "blur(12px)",
-          flexWrap: "wrap",
-          gap: "0.75rem",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-          <div className="pulse-dot" />
-          <span style={{ fontWeight: 600, color: "#f8fafc" }}>
-            OmniSync · local demo
-          </span>
-          <span style={{ color: "var(--text-muted)" }}>•</span>
-          <span style={{ color: "var(--text-secondary)" }}>
-            Posting integrations are not configured
-          </span>
-        </div>
+    <header className="site-header">
+      <div className="site-topbar">
+        <button className="brand-mark" type="button" onClick={() => setActiveTab("matrix")} aria-label="OmniSync home">
+          <span className="brand-icon"><ArrowRightLeft size={17} /></span>
+          <span>OmniSync</span>
+          <span className="demo-pill">Local demo</span>
+        </button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "var(--accent-emerald)" }}>
-            <ShieldCheck size={14} />
-            <span style={{ fontWeight: 600, fontSize: "0.8rem" }}>
-              Echo Guard: {loopBlockedCount} Echoes Prevented
-            </span>
-          </div>
-
-        </div>
-      </div>
-
-      {/* Main Title & Action Bar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: "1.5rem",
-          marginBottom: "1.75rem",
-        }}
-      >
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.35rem" }}>
-            <div
-              style={{
-                width: "44px",
-                height: "44px",
-                borderRadius: "14px",
-                background: "linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 6px 24px rgba(99, 102, 241, 0.4)",
-              }}
-            >
-              <ArrowRightLeft size={22} color="#ffffff" />
-            </div>
-
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <h1 style={{ fontSize: "1.85rem", fontWeight: 800, letterSpacing: "-0.03em" }}>
-                  Omni<span className="gradient-text-accent">Sync</span>
-                </h1>
-                <span className="badge badge-emerald" style={{ fontSize: "0.68rem", padding: "0.15rem 0.5rem" }}>
-                  Demo Mode
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.925rem", maxWidth: "620px" }}>
-            Organize social profile links, preview cross-posts, and explore sync safeguards. Posts stay in this demo until official platform integrations are configured.
-          </p>
-        </div>
-
-        {/* Primary Action Buttons */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+        <div className="topbar-actions">
+          <button type="button" onClick={onOpenDeployGuide} className="btn btn-ghost btn-sm deploy-link">
+            <CloudLightning size={15} /> Deploy guide
+          </button>
           {onOpenConnectModal && (
-            <button
-              onClick={onOpenConnectModal}
-              className="btn btn-primary"
-              id="header-connect-url-btn"
-            >
-              <LinkIcon size={15} />
-              <span>Add profile link</span>
+            <button type="button" onClick={onOpenConnectModal} className="btn btn-primary btn-sm" id="header-connect-url-btn">
+              <LinkIcon size={15} /> Add a profile
             </button>
           )}
-
-          <button
-            onClick={onOpenSimulate}
-            className="btn btn-accent"
-            id="simulate-incoming-post-btn"
-          >
-            <Play size={15} fill="currentColor" />
-            <span>Simulate Incoming Post</span>
-          </button>
-
-          <button
-            onClick={onOpenDeployGuide}
-            className="btn btn-outline"
-            id="deploy-guide-btn"
-          >
-            <CloudLightning size={15} />
-            <span>Deploy on Vercel</span>
-          </button>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="tabs-nav">
-        <button
-          onClick={() => setActiveTab("matrix")}
-          className={`tab-btn ${activeTab === "matrix" ? "active" : ""}`}
-          id="nav-tab-matrix"
-        >
-          <ArrowRightLeft size={15} />
-          <span>Sync Matrix ({accountCount} accounts · {routeCount} routes)</span>
-        </button>
+      <section className="hero" aria-labelledby="hero-title">
+        <div className="hero-copy">
+          <span className="eyebrow"><span className="eyebrow-dot" /> SOCIAL WORKSPACE, MADE SIMPLE</span>
+          <h1 id="hero-title" className="hero-title">Your voice,<br />in every place.</h1>
+          <p className="hero-description">
+            Keep your social profiles in one calm workspace. Draft once, preview each destination, and choose where your post belongs.
+          </p>
+          <div className="hero-actions">
+            {onOpenConnectModal && (
+              <button type="button" onClick={onOpenConnectModal} className="btn btn-primary" id="hero-connect-btn">
+                <LinkIcon size={16} /> Connect a profile
+              </button>
+            )}
+            <button type="button" onClick={() => setActiveTab("composer")} className="btn btn-outline">
+              <Layers size={16} /> Write a post
+            </button>
+          </div>
+          <p className="hero-note">Profile links and previews stay in this browser. No posts are published in demo mode.</p>
 
-        <button
-          onClick={() => setActiveTab("composer")}
-          className={`tab-btn ${activeTab === "composer" ? "active" : ""}`}
-          id="nav-tab-composer"
-        >
-          <Layers size={15} />
-          <span>Post Preview Composer</span>
-        </button>
+          <div className="hero-metrics" aria-label="Workspace summary">
+            <div><strong>{accountCount}</strong><span>profiles</span></div>
+            <span className="metric-divider" />
+            <div><strong>{routeCount}</strong><span>routes</span></div>
+            <span className="metric-divider" />
+            <div className="guard-metric"><ShieldCheck size={16} /><strong>{loopBlockedCount}</strong><span>echoes blocked</span></div>
+          </div>
+        </div>
 
-        <button
-          onClick={() => setActiveTab("cardStudio")}
-          className={`tab-btn ${activeTab === "cardStudio" ? "active" : ""}`}
-          id="nav-tab-card-studio"
-        >
-          <Sparkles size={15} />
-          <span>Tech Quote Card Studio (X ➔ IG)</span>
-        </button>
+      </section>
 
-        <button
-          onClick={() => setActiveTab("ledger")}
-          className={`tab-btn ${activeTab === "ledger" ? "active" : ""}`}
-          id="nav-tab-ledger"
-        >
-          <ShieldCheck size={15} />
-          <span>Activity Ledger & Loop Guard</span>
-        </button>
+      <div className="workspace-bar">
+        <div className="workspace-tabs" role="tablist" aria-label="Workspace views">
+          {tabs.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === id}
+              className={`workspace-tab ${activeTab === id ? "active" : ""}`}
+              onClick={() => setActiveTab(id)}
+            >
+              <Icon size={15} />
+              <span>{id === "matrix" ? `Profiles & routes (${accountCount})` : label}</span>
+            </button>
+          ))}
+        </div>
+        <div className="workspace-actions">
+          <span className="guard-status"><ShieldCheck size={15} /> Echo guard on</span>
+          <button type="button" onClick={onOpenSimulate} className="btn btn-outline btn-sm" id="simulate-incoming-post-btn">
+            <Play size={14} /> Simulate activity
+          </button>
+        </div>
       </div>
     </header>
   );

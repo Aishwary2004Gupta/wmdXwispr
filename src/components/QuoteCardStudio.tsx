@@ -200,7 +200,7 @@ export default function QuoteCardStudio({ account }: QuoteCardStudioProps) {
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 className="font-mono"
-                style={{ fontSize: "0.82rem", color: "#38bdf8" }}
+                style={{ fontSize: "0.82rem", color: "#31527e" }}
               />
             )}
           </div>

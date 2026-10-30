@@ -55,6 +55,8 @@ function readAccounts(value: unknown): SocialAccount[] {
     lastVerifiedAt: "Not connected",
     verifiedSessionId: undefined,
     verificationMethod: undefined,
+    verificationOutcome: undefined,
+    verificationNote: undefined,
     badge: account.badge === "Verified Owner" ? "Profile link saved" : account.badge,
   }));
 }
@@ -108,6 +110,7 @@ export default function Home() {
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
   const [connectInitialUrl, setConnectInitialUrl] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [authFeedback, setAuthFeedback] = useState("");
 
   // Load state after hydration, validating stored data before using it.
   useEffect(() => {
@@ -146,6 +149,59 @@ export default function Home() {
     }
   }, [accounts, routes, logs, mounted]);
 
+  // The signed, HttpOnly cookies are the source of truth for OAuth checks.
+  useEffect(() => {
+    if (!mounted) return;
+    let active = true;
+    let feedbackTimer: number | undefined;
+    const query = new URLSearchParams(window.location.search);
+    const authResult = query.get("social_auth");
+    const platform = query.get("platform");
+    if (authResult) {
+      const platformName = platform && isPlatform(platform) ? PLATFORM_CONFIGS[platform].name : "the social network";
+      const messages: Record<string, string> = {
+        matched: `${platformName} sign-in succeeded and the returned handle matches the saved profile.`,
+        mismatch: `${platformName} sign-in returned a different account. The saved profile remains unverified.`,
+        identity_only: `${platformName} sign-in succeeded, but this provider did not return a handle that can confirm the saved profile link.`,
+        error: `${platformName} sign-in was cancelled or could not be completed. The saved profile remains unverified.`,
+      };
+      feedbackTimer = window.setTimeout(() => {
+        if (active) setAuthFeedback(messages[authResult] || messages.error);
+      }, 0);
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.hash}`);
+    }
+
+    fetch("/api/auth/status", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Could not read sign-in status.")))
+      .then((payload: { verified?: Array<{ accountId: string; platform: SocialPlatform; providerUsername?: string; providerName?: string; expectedHandle: string; outcome: "matched" | "mismatch" | "identity_only"; checkedAt: string }> }) => {
+        if (!active || !Array.isArray(payload.verified)) return;
+        const byId = new Map(payload.verified.map((entry) => [entry.accountId, entry]));
+        setAccounts((current) => current.map((account) => {
+          const result = byId.get(account.id);
+          if (!result || result.platform !== account.platform) return account;
+          let note: string | undefined;
+          if (result.outcome === "mismatch") note = `Signed in as @${result.providerUsername}; saved profile is @${result.expectedHandle}.`;
+          if (result.outcome === "identity_only") note = "Sign-in succeeded, but this provider did not return a profile handle to compare.";
+          return {
+            ...account,
+            isVerifiedOwner: result.outcome === "matched",
+            authProvider: "oauth",
+            lastVerifiedAt: result.checkedAt,
+            verifiedSessionId: result.providerName || result.providerUsername || "Account sign-in",
+            verificationMethod: "oauth_login",
+            verificationOutcome: result.outcome,
+            verificationNote: note,
+            badge: result.outcome === "matched" ? "Account control confirmed" : undefined,
+          };
+        }));
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+      if (feedbackTimer !== undefined) window.clearTimeout(feedbackTimer);
+    };
+  }, [mounted]);
+
   const handleOpenConnectModal = (url?: string) => {
     setConnectInitialUrl(url || "");
     setIsConnectModalOpen(true);
@@ -163,6 +219,7 @@ export default function Home() {
   };
 
   const handleDeleteAccount = (id: string) => {
+    void fetch(`/api/auth/status?accountId=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => undefined);
     setAccounts((prev) => prev.filter((a) => a.id !== id));
     setRoutes((prev) => prev.filter((r) => r.sourceAccountId !== id && r.targetAccountId !== id));
   };
@@ -424,6 +481,7 @@ export default function Home() {
           onDeleteRoute={handleDeleteRoute}
           onQuickSimulateRoute={handleQuickSimulateRoute}
           onOpenConnectModal={handleOpenConnectModal}
+          authFeedback={authFeedback}
         />
       )}
 

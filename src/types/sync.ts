@@ -30,6 +30,8 @@ export interface SocialAccount {
   lastVerifiedAt: string;
   verifiedSessionId?: string;
   verificationMethod?: 'oauth_login' | 'browser_session' | 'bio_proof';
+  verificationOutcome?: 'matched' | 'mismatch' | 'identity_only';
+  verificationNote?: string;
   proofToken?: string;
 }
 

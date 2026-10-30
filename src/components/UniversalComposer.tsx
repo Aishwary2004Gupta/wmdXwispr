@@ -17,6 +17,7 @@ import {
   Repeat2,
   Send,
   Share2,
+  ShieldAlert,
   Sparkles,
   Terminal,
   Trash2,
@@ -53,8 +54,8 @@ export default function UniversalComposer({
     Array.from(new Set(accounts.slice(0, 3).map((account) => account.platform))),
   );
   const [themeId, setThemeId] = useState("obsidian-tech");
-  const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [broadcastSuccess, setBroadcastSuccess] = useState(false);
+  const [broadcastError, setBroadcastError] = useState("");
 
   // Media Attachment State: 'card' (auto-card), 'image', 'gif', 'video'
   const [activeMediaType, setActiveMediaType] = useState<MediaType>("card");
@@ -105,9 +106,9 @@ export default function UniversalComposer({
 
   const handleSend = () => {
     if (!content.trim() || selectedPlatforms.length === 0) return;
-    setIsBroadcasting(true);
-
-    setTimeout(() => {
+    setBroadcastError("");
+    setBroadcastSuccess(false);
+    try {
       onBroadcast({
         content,
         mediaType: activeMediaType,
@@ -117,10 +118,15 @@ export default function UniversalComposer({
         categoryTag,
         codeSnippet: showCode ? codeSnippet : undefined,
       });
-      setIsBroadcasting(false);
       setBroadcastSuccess(true);
-      setTimeout(() => setBroadcastSuccess(false), 4000);
-    }, 1200);
+    } catch (error) {
+      console.error("Could not save the local post preview:", error);
+      setBroadcastError(
+        error instanceof Error && process.env.NODE_ENV === "development"
+          ? `Could not save preview: ${error.message}`
+          : "Could not save this preview. Please try again.",
+      );
+    }
   };
 
   const charCount = content.length;
@@ -136,7 +142,7 @@ export default function UniversalComposer({
             background: "rgba(16, 185, 129, 0.15)",
             border: "1px solid rgba(16, 185, 129, 0.4)",
             borderRadius: "var(--radius-md)",
-            color: "#6ee7b7",
+            color: "#17634b",
             display: "flex",
             alignItems: "center",
             gap: "0.75rem",
@@ -149,12 +155,26 @@ export default function UniversalComposer({
           </div>
         </div>
       )}
+      {broadcastError && (
+        <div className="composer-error" role="alert">
+          <strong>Preview not saved.</strong>
+          <span>{broadcastError}</span>
+          <button type="button" onClick={() => setBroadcastError("")} aria-label="Dismiss error">×</button>
+        </div>
+      )}
+      <div className="publishing-status-notice" role="status">
+        <ShieldAlert size={19} />
+        <div>
+          <strong>Social publishing is not enabled</strong>
+          <p>Your profile links are not authenticated. The action below saves a local preview only; a separate OAuth integration is needed for every social network before anything can be published.</p>
+        </div>
+      </div>
 
       {/* Main Composer Layout */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 440px), 1fr))",
           gap: "2rem",
           alignItems: "start",
         }}
@@ -180,6 +200,11 @@ export default function UniversalComposer({
               {availablePlatforms.map((p) => {
                 const conf = PLATFORM_CONFIGS[p];
                 if (!conf) return null;
+                const platformAccent = p === "twitter" || p === "threads"
+                  ? "#48618a"
+                  : p === "tiktok"
+                  ? "#176c73"
+                  : conf.color;
                 const isSelected = selectedPlatforms.includes(p);
                 return (
                   <button
@@ -188,9 +213,9 @@ export default function UniversalComposer({
                     onClick={() => handleTogglePlatform(p)}
                     className="btn btn-sm"
                     style={{
-                      background: isSelected ? `${conf.color}25` : "rgba(255,255,255,0.04)",
-                      border: `1px solid ${isSelected ? conf.color : "var(--border-subtle)"}`,
-                      color: isSelected ? "#ffffff" : "var(--text-secondary)",
+                      background: isSelected ? "rgba(36, 85, 207, 0.08)" : "#ffffff",
+                      border: `1px solid ${isSelected ? "var(--primary)" : "var(--border-subtle)"}`,
+                      color: isSelected ? "var(--primary)" : "var(--text-secondary)",
                     }}
                   >
                     <span
@@ -198,12 +223,12 @@ export default function UniversalComposer({
                         width: "8px",
                         height: "8px",
                         borderRadius: "50%",
-                        background: conf.color,
+                        background: platformAccent,
                         display: "inline-block",
                       }}
                     />
                     <span>{conf.shortName}</span>
-                    {isSelected && <Check size={13} color={conf.color} />}
+                    {isSelected && <Check size={13} color="var(--primary)" />}
                   </button>
                 );
               })}
@@ -421,7 +446,7 @@ export default function UniversalComposer({
                 onChange={(e) => setCodeSnippet(e.target.value)}
                 placeholder="Code snippet or command..."
                 className="font-mono"
-                style={{ fontSize: "0.85rem", color: "#38bdf8" }}
+                style={{ fontSize: "0.85rem", color: "#31527e" }}
               />
             )}
           </div>
@@ -429,22 +454,13 @@ export default function UniversalComposer({
           {/* Broadcast Action Button */}
           <button
             onClick={handleSend}
-            disabled={isBroadcasting || !content.trim() || selectedPlatforms.length === 0}
+            disabled={!content.trim() || selectedPlatforms.length === 0}
             className="btn btn-primary"
             style={{ width: "100%", padding: "0.85rem", fontSize: "1rem" }}
             id="broadcast-channels-btn"
           >
-            {isBroadcasting ? (
-              <>
-                <div className="pulse-dot" style={{ backgroundColor: "#ffffff" }} />
-                <span>Preparing local preview...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles size={18} />
-                <span>Save Local Preview</span>
-              </>
-            )}
+            <Sparkles size={18} />
+            <span>Save Local Preview</span>
           </button>
         </div>
 
@@ -471,7 +487,7 @@ export default function UniversalComposer({
               <span style={{ fontWeight: 800, fontSize: "0.8rem", color: "#f8fafc" }}>
                 X (TWITTER) NATIVE FEED
               </span>
-              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Just now</span>
+              <span style={{ fontSize: "0.75rem", color: "#aeb8c8" }}>Just now</span>
             </div>
 
             <div style={{ display: "flex", gap: "0.75rem" }}>
@@ -686,8 +702,8 @@ export default function UniversalComposer({
               <Send size={20} />
             </div>
 
-            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>
-              <strong style={{ color: "var(--text-primary)" }}>{instagramAccount.handle}</strong>{" "}
+            <p style={{ fontSize: "0.85rem", color: "#d4dced", lineHeight: 1.4 }}>
+              <strong style={{ color: "#ffffff" }}>{instagramAccount.handle}</strong>{" "}
               {content.slice(0, 110)}... #tech #design #coding #uiux
             </p>
           </div>

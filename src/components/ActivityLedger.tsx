@@ -114,7 +114,7 @@ export default function ActivityLedger({ logs, onClearLogs }: ActivityLedgerProp
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <div style={{ display: "flex", background: "rgba(255,255,255,0.05)", borderRadius: "var(--radius-md)", padding: "0.2rem" }}>
+          <div style={{ display: "flex", background: "rgba(36, 85, 207, 0.06)", borderRadius: "var(--radius-md)", padding: "0.2rem" }}>
             <button
               onClick={() => setFilterStatus("all")}
               className={`btn btn-sm ${filterStatus === "all" ? "btn-primary" : "btn-ghost"}`}
@@ -182,11 +182,11 @@ export default function ActivityLedger({ logs, onClearLogs }: ActivityLedgerProp
               >
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", fontSize: "0.85rem" }}>
-                    <span style={{ fontWeight: 700, color: srcConf.color }}>
+                    <span style={{ fontWeight: 700, color: "var(--primary)" }}>
                       {srcConf.shortName} ({log.sourceHandle})
                     </span>
                     <ArrowRight size={14} color="var(--text-muted)" />
-                    <span style={{ fontWeight: 700, color: tgtConf.color }}>
+                    <span style={{ fontWeight: 700, color: "var(--primary)" }}>
                       {tgtConf.shortName} ({log.targetHandle})
                     </span>
 
@@ -288,9 +288,9 @@ export default function ActivityLedger({ logs, onClearLogs }: ActivityLedgerProp
                     style={{
                       marginTop: "0.5rem",
                       padding: "1rem",
-                      background: "rgba(0, 0, 0, 0.45)",
+                      background: "rgba(239, 244, 255, 0.94)",
                       borderRadius: "var(--radius-sm)",
-                      border: "1px solid rgba(255, 255, 255, 0.08)",
+                      border: "1px solid rgba(36, 85, 207, 0.16)",
                       display: "flex",
                       flexDirection: "column",
                       gap: "0.6rem",

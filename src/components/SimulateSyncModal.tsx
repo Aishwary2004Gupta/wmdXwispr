@@ -269,7 +269,7 @@ export default function SimulateSyncModal({
               marginBottom: "1.5rem",
             }}
           >
-            <div style={{ color: "var(--accent-cyan)", marginBottom: "0.5rem", fontWeight: 700 }}>
+            <div style={{ color: "#9cc8ff", marginBottom: "0.5rem", fontWeight: 700 }}>
               &gt; OmniSync Engine Pipeline Execution:
             </div>
             {pipelineSteps.map((step, idx) => (
@@ -277,10 +277,10 @@ export default function SimulateSyncModal({
                 key={idx}
                 style={{
                   color: step.includes("🛡️")
-                    ? "var(--accent-violet)"
+                    ? "#c6adff"
                     : step.includes("✅")
-                    ? "var(--accent-emerald)"
-                    : "var(--text-secondary)",
+                    ? "#72e3b0"
+                    : "#cbd5e1",
                 }}
               >
                 {step}

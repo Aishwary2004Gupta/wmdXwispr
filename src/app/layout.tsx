@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "OmniSync | Universal Social Media Cross-Poster & Sync Engine",
-  description: "Save social profile links, preview cross-post routes, and explore duplicate-loop protection in a local demo.",
+  title: "OmniSync | Your social workspace",
+  description: "Organize social profile links, draft posts, and preview every destination from one calm workspace.",
 };
 
 export default function RootLayout({

@@ -159,12 +159,12 @@ export default function ConnectSocialModal({
       >
         <div className="connect-modal-header">
           <div className="connect-modal-title-wrap">
-            <div className="connect-modal-icon" style={{ color: platformConfig.color }}>
+            <div className="connect-modal-icon" style={{ color: "var(--primary)" }}>
               <Link2 size={19} />
             </div>
             <div>
-              <h2 id="connect-modal-title">Add a social profile</h2>
-              <p>Paste a link from a supported service or any other social site.</p>
+              <h2 id="connect-modal-title">Add a profile link</h2>
+              <p>Choose a social site and paste your profile URL.</p>
             </div>
           </div>
           <button type="button" onClick={onClose} className="btn btn-ghost btn-sm" aria-label="Close dialog">
@@ -212,7 +212,7 @@ export default function ConnectSocialModal({
 
           {parsedUrl && (
             <div className="connect-preview">
-              <span className="connect-preview-mark" style={{ background: `${platformConfig.color}20`, color: platformConfig.color }}>
+              <span className="connect-preview-mark" style={{ background: "rgba(36, 85, 207, 0.08)", color: "var(--primary)" }}>
                 {finalPlatformName.slice(0, 1).toUpperCase()}
               </span>
               <div className="connect-preview-copy">
@@ -226,7 +226,7 @@ export default function ConnectSocialModal({
           <div className="connect-notice">
             <ShieldAlert size={17} />
             <p>
-              This saves the profile link in this browser. It does not sign you in, verify ownership, or enable posting. Official platform authorization must be configured before publishing can work.
+              Saving this link does not sign you in or verify that you own the profile. Publishing requires a separate OAuth sign-in with this social network. This project does not have the platform integrations or developer credentials needed to start that sign-in yet.
             </p>
           </div>
 
@@ -236,7 +236,7 @@ export default function ConnectSocialModal({
             <button type="button" onClick={onClose} className="btn btn-ghost">Cancel</button>
             <button type="submit" className="btn btn-primary" disabled={!parsedUrl}>
               <Link2 size={16} />
-              <span>Save profile link</span>
+              <span>Save link only</span>
             </button>
           </div>
         </form>
