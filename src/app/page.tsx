@@ -92,15 +92,17 @@ export default function Home() {
   const activeCategories = FILE_CATEGORIES.filter((category) => counts[category.id] > 0);
   const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
 
-  const scanFolder = async (folder: DirectoryHandle) => {
+  const scanFolder = async (folder: DirectoryHandle, preserveHistory = false) => {
     setIsScanning(true);
     setNotice(null);
     try {
       const found = await readFolder(folder);
       setDirectory(folder);
       setFiles(found);
-      setSortResult(null);
-      setUndoMoves([]);
+      if (!preserveHistory) {
+        setSortResult(null);
+        setUndoMoves([]);
+      }
       if (found.length === 0) setNotice({ kind: "info", title: "This folder is already clear", detail: "There are no files at its top level to sort." });
     } catch (error) {
       setNotice({ kind: "error", title: "Could not read this folder", detail: errorText(error) });
@@ -261,7 +263,7 @@ export default function Home() {
           <div className="overview-heading">
             <div className="folder-title-icon"><FolderOpen size={20} /></div>
             <div><span className="section-kicker">SELECTED FOLDER</span><h2>{directory.name}</h2></div>
-            <button type="button" className="button button-soft overview-scan" onClick={() => scanFolder(directory)} disabled={isScanning || isSorting}>
+            <button type="button" className="button button-soft overview-scan" onClick={() => scanFolder(directory, true)} disabled={isScanning || isSorting}>
               {isScanning ? <LoaderCircle className="spin" size={16} /> : <ScanSearch size={16} />}{isScanning ? "Scanning…" : "Scan again"}
             </button>
           </div>
