@@ -1,35 +1,21 @@
 # TidyDrop
 
-TidyDrop is a local-first folder organizer. Choose a folder, review how loose files will be grouped, then confirm the sort. File names and contents stay in the browser; nothing is uploaded to a server.
+### A calmer Downloads folder, in one preview-first pass.
 
-## Run locally
+TidyDrop is a private, browser-based file organizer. Choose Downloads or another folder, preview how its loose files will be grouped, then confirm to sort them into folders by file type.
 
-```bash
-npm ci
-npm run dev
-```
+## What it does
 
-Open <http://localhost:3000> in a recent version of Chrome or Edge. The browser requires `localhost` or HTTPS to grant a website access to a folder.
+- Scans loose files at the top level of the folder you select.
+- Groups files by type and shows a preview of their destination folders before making changes.
+- Creates the category folders and moves files only after you confirm.
+- Keeps existing files safe by assigning a numbered name when a destination already contains a matching filename.
+- Lets you undo the most recent sort while the current page session remains open.
 
-## Use it
+TidyDrop leaves subfolders and their contents untouched. File groups are determined by file extensions; unrecognized types go into **Other files**.
 
-1. Choose Downloads or another folder in the browser's folder picker.
-2. Review the file-type groups and preview.
-3. Confirm the sort. TidyDrop creates folders for the groups and moves the files into them.
-4. Use **Undo last sort** to move the files back during the current page session.
+## Private by design
 
-TidyDrop only scans loose files at the selected folder's top level. It leaves nested folders untouched. If a destination already contains a file with the same name, it adds a number to the new file name instead of replacing the existing file.
+TidyDrop works with the folder you select through your browser. File names and contents stay on your device and are not uploaded to TidyDrop. Your browser asks for read and write access when you choose a folder.
 
-## Limits
-
-- Folder access uses the browser File System Access API. Chrome and Edge support the full read/write flow. Other browsers may not expose folder access.
-- The browser asks for read/write access to the folder you pick. Select only folders you want the app to organize.
-- The last-sort undo history stays in memory and is cleared when the page is refreshed or closed.
-- File groups are inferred from file extensions. Unknown extensions go to **Other files**.
-
-## Checks
-
-```bash
-npm run lint
-npm run build
-```
+Folder sorting requires a browser that supports the File System Access API, such as a recent desktop version of Chrome or Edge. Other browsers may not offer the required folder access.
