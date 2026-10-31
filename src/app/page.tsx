@@ -21,6 +21,12 @@ interface ScannedFile {
   handle: FileHandle;
 }
 
+interface CreatedCategoryFolder {
+  name: string;
+  parent: DirectoryHandle;
+  handle: DirectoryHandle;
+}
+
 interface Notice {
   kind: "success" | "error" | "info";
   title: string;
@@ -72,6 +78,11 @@ async function readFolder(directory: DirectoryHandle): Promise<ScannedFile[]> {
   return files.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 }
 
+async function isDirectoryEmpty(directory: DirectoryHandle) {
+  for await (const _entry of directory.values()) return false;
+  return true;
+}
+
 function errorText(error: unknown) {
   if (error instanceof Error && error.name === "NotAllowedError") return "Folder access was not granted.";
   if (error instanceof Error && error.name === "NotFoundError") return "This file or folder is no longer available.";
@@ -84,6 +95,7 @@ export default function Home() {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [sortResult, setSortResult] = useState<{ folderName: string; moved: number; failed: string[] } | null>(null);
   const [undoMoves, setUndoMoves] = useState<FileMoveRecord[]>([]);
+  const [createdCategoryFolders, setCreatedCategoryFolders] = useState<CreatedCategoryFolder[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [isSorting, setIsSorting] = useState(false);
   const [isUndoing, setIsUndoing] = useState(false);
@@ -108,6 +120,7 @@ export default function Home() {
       if (!preserveHistory) {
         setSortResult(null);
         setUndoMoves([]);
+        setCreatedCategoryFolders([]);
       }
       if (found.length === 0) setNotice({ kind: "info", title: "This folder is already clear", detail: "There are no files at its top level to sort." });
     } catch (error) {
@@ -172,9 +185,11 @@ export default function Home() {
     const sourceFiles = [...files];
     const moved: FileMoveRecord[] = [];
     const failed: string[] = [];
+    const createdFolders: CreatedCategoryFolder[] = [];
     const destinationCache = new Map<CategoryId, { handle: DirectoryHandle; names: Set<string> }>();
     setSortResult(null);
     setUndoMoves([]);
+    setCreatedCategoryFolders([]);
     setIsSorting(true);
     setSortProgress(0);
     setNotice(null);
@@ -185,7 +200,14 @@ export default function Home() {
         let destination = destinationCache.get(file.categoryId);
         if (!destination) {
           const category = FILE_CATEGORIES.find((item) => item.id === file.categoryId)!;
-          const handle = await directory.getDirectoryHandle(category.name, { create: true });
+          let handle: DirectoryHandle;
+          try {
+            handle = await directory.getDirectoryHandle(category.name);
+          } catch (error) {
+            if (!(error instanceof Error) || error.name !== "NotFoundError") throw error;
+            handle = await directory.getDirectoryHandle(category.name, { create: true });
+            createdFolders.push({ name: category.name, parent: directory, handle });
+          }
           const names = new Set<string>();
           for await (const entry of handle.values()) names.add(entry.name.toLocaleLowerCase());
           destination = { handle, names };
@@ -205,6 +227,21 @@ export default function Home() {
       if (index % 10 === 0 || index + 1 === sourceFiles.length) setSortProgress(index + 1);
     }
 
+    const foldersToTrack: CreatedCategoryFolder[] = [];
+    const folderCleanupFailures: string[] = [];
+    for (const createdFolder of createdFolders) {
+      try {
+        if (await isDirectoryEmpty(createdFolder.handle)) {
+          await createdFolder.parent.removeEntry(createdFolder.name);
+        } else {
+          foldersToTrack.push(createdFolder);
+        }
+      } catch (error) {
+        foldersToTrack.push(createdFolder);
+        folderCleanupFailures.push(`${createdFolder.name}: ${errorText(error)}`);
+      }
+    }
+    setCreatedCategoryFolders(foldersToTrack);
     setUndoMoves(moved);
     try {
       setFiles(await readFolder(directory));
@@ -217,7 +254,9 @@ export default function Home() {
       setNotice({
         kind: failed.length ? "info" : "success",
         title: failed.length ? `Sorted ${moved.length} files; ${failed.length} need attention` : `All ${moved.length} files are sorted`,
-        detail: failed.length ? `${failed.slice(0, 2).join("; ")}${failed.length > 2 ? `; and ${failed.length - 2} more` : ""}. Files that could not be moved remain where they were.` : "Your files are in type folders. You can undo this sort.",
+        detail: failed.length
+          ? `${failed.slice(0, 2).join("; ")}${failed.length > 2 ? `; and ${failed.length - 2} more` : ""}. Files that could not be moved remain where they were.`
+          : `Your files are in type folders. You can undo this sort.${folderCleanupFailures.length ? ` Empty folders needing cleanup: ${folderCleanupFailures.join("; ")}.` : ""}`,
       });
     } else {
       setNotice({ kind: "error", title: "No files were moved", detail: failed[0] || "Try scanning the folder again." });
@@ -226,7 +265,7 @@ export default function Home() {
   };
 
   const undoLastSort = async () => {
-    if (!undoMoves.length || isUndoing) return;
+    if ((!undoMoves.length && !createdCategoryFolders.length) || isUndoing) return;
     if (!await requestWriteAccess()) return;
     setIsUndoing(true);
     const records = [...undoMoves].reverse();
@@ -246,15 +285,55 @@ export default function Home() {
         stillPending.push(record);
       }
     }
+
+    const foldersToRetry: CreatedCategoryFolder[] = [];
+    const cleanupFailures: string[] = [];
+    let removedFolderCount = 0;
+    let keptNonEmptyFolderCount = 0;
+    for (const createdFolder of [...createdCategoryFolders].reverse()) {
+      try {
+        if (!await isDirectoryEmpty(createdFolder.handle)) {
+          keptNonEmptyFolderCount += 1;
+          const hasPendingFiles = stillPending.some((record) => record.destinationDirectory === createdFolder.handle);
+          if (hasPendingFiles) {
+            foldersToRetry.push(createdFolder);
+          }
+          continue;
+        }
+        await createdFolder.parent.removeEntry(createdFolder.name);
+        removedFolderCount += 1;
+      } catch (error) {
+        if (error instanceof Error && error.name === "NotFoundError") continue;
+        cleanupFailures.push(`${createdFolder.name}: ${errorText(error)}`);
+        foldersToRetry.push(createdFolder);
+      }
+    }
+
     setUndoMoves(stillPending);
-    if (stillPending.length === 0) setSortResult(null);
+    setCreatedCategoryFolders(foldersToRetry);
+    if (stillPending.length === 0 && foldersToRetry.length === 0) setSortResult(null);
     if (directory) {
       try { setFiles(await readFolder(directory)); } catch { /* Keep the last visible scan if access has changed. */ }
     }
+    const cleanupSummary = [
+      removedFolderCount > 0
+        ? `${removedFolderCount} empty folder${removedFolderCount === 1 ? "" : "s"} created by TidyDrop ${removedFolderCount === 1 ? "was" : "were"} removed.`
+        : "",
+      keptNonEmptyFolderCount > 0
+        ? `${keptNonEmptyFolderCount} non-empty folder${keptNonEmptyFolderCount === 1 ? " was" : "s were"} kept safe.`
+        : "",
+    ].filter(Boolean).join(" ");
+    const cleanupDetail = cleanupFailures.length
+      ? `Could not remove empty folders: ${cleanupFailures.join("; ")}. Try the cleanup action again.`
+      : cleanupSummary || "No empty folders needed removal.";
     setNotice({
-      kind: failed.length ? "info" : "success",
-      title: failed.length ? `Restored ${restored} files; ${failed.length} could not be restored` : `Restored ${restored} files to ${sortResult?.folderName || "their original folder"}`,
-      detail: failed[0] || "Files are back in the original folder. Name conflicts were kept safe with a numbered filename.",
+      kind: failed.length || cleanupFailures.length ? "info" : "success",
+      title: failed.length
+        ? `Restored ${restored} files; ${failed.length} could not be restored`
+        : cleanupFailures.length
+          ? "Files restored; folder cleanup needs another try"
+          : `Restored ${restored} files to ${sortResult?.folderName || "their original folder"}`,
+      detail: failed[0] ? `${failed[0]} ${cleanupDetail}` : cleanupDetail,
     });
     setIsUndoing(false);
   };
@@ -319,7 +398,7 @@ export default function Home() {
         {sortResult && <section className="result-panel" aria-live="polite">
           <div className="result-check"><Check size={21} /></div>
           <div className="result-copy"><span className="section-kicker">SORT COMPLETE</span><h2>{sortResult.moved.toLocaleString()} files organized in {sortResult.folderName}</h2><p>{sortResult.failed.length ? `${sortResult.failed.length} file${sortResult.failed.length === 1 ? "" : "s"} could not be moved; originals remain safe.` : "Everything went into a folder by file type."}</p></div>
-          {undoMoves.length > 0 && <button className="button button-outline" type="button" onClick={undoLastSort} disabled={isUndoing}>{isUndoing ? <LoaderCircle className="spin" size={16} /> : <RotateCcw size={16} />}{isUndoing ? "Restoring…" : "Undo last sort"}</button>}
+          {(undoMoves.length > 0 || createdCategoryFolders.length > 0) && <button className="button button-outline" type="button" onClick={undoLastSort} disabled={isUndoing}>{isUndoing ? <LoaderCircle className="spin" size={16} /> : <RotateCcw size={16} />}{isUndoing ? "Restoring…" : undoMoves.length > 0 ? "Undo last sort" : "Remove empty folders"}</button>}
         </section>}
 
         <section className="organize-section">
