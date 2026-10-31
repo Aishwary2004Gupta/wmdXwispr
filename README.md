@@ -1,5 +1,8 @@
 # TidyDrop
 
+<img width="1896" height="862" alt="Screenshot 2026-10-31 114903" src="https://github.com/user-attachments/assets/351a38b0-02eb-45a6-99f3-cafee32c2c12" />
+
+
 ### A calmer Downloads folder, in one preview-first pass.
 
 TidyDrop is a private, browser-based file organizer. Choose Downloads or another folder, preview how its loose files will be grouped, then confirm to sort them into folders by file type.
