@@ -27,6 +27,11 @@ interface Notice {
   detail?: string;
 }
 
+interface FolderDialogMessage {
+  title: string;
+  detail: string;
+}
+
 interface FolderPickerWindow extends Window {
   showDirectoryPicker?: (options: { id: string; mode: "readwrite"; startIn: "downloads" }) => Promise<DirectoryHandle>;
 }
@@ -88,6 +93,7 @@ export default function Home() {
   const [isSorting, setIsSorting] = useState(false);
   const [isUndoing, setIsUndoing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [folderDialog, setFolderDialog] = useState<FolderDialogMessage | null>(null);
   const [sortProgress, setSortProgress] = useState(0);
 
   const counts = useMemo(() => {
@@ -120,10 +126,9 @@ export default function Home() {
   const chooseFolder = async () => {
     const browserWindow = window as FolderPickerWindow;
     if (!window.isSecureContext || !browserWindow.showDirectoryPicker) {
-      setNotice({
-        kind: "error",
-        title: "Folder access is not available in this browser",
-        detail: "Open TidyDrop in a recent version of Chrome or Edge on localhost or HTTPS, then choose a folder again.",
+      setFolderDialog({
+        title: "Folder access isn’t available here",
+        detail: "TidyDrop needs a secure connection and a browser with folder access support. Open this site over HTTPS in a recent desktop version of Chrome or Edge, then try again.",
       });
       return;
     }
@@ -131,8 +136,17 @@ export default function Home() {
       const chosen = await browserWindow.showDirectoryPicker({ id: "tidydrop-folder", mode: "readwrite", startIn: "downloads" });
       await scanFolder(chosen);
     } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") return;
-      setNotice({ kind: "error", title: "Folder access was not completed", detail: errorText(error) });
+      if (error instanceof Error && error.name === "AbortError") {
+        setFolderDialog({
+          title: "Choose a different folder",
+          detail: "Your browser closed the folder selection. Protected system folders can’t be opened here. Try Downloads, Documents, Desktop, or another regular folder.",
+        });
+        return;
+      }
+      setFolderDialog({
+        title: "TidyDrop couldn’t open that folder",
+        detail: `${errorText(error)} Try choosing Downloads, Documents, Desktop, or another regular folder.`,
+      });
     }
   };
 
@@ -346,6 +360,23 @@ export default function Home() {
           Made by <strong>X</strong><ExternalLink size={13} aria-hidden="true" />
         </a>
       </footer>
+
+      {folderDialog && <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setFolderDialog(null)}>
+        <section className="confirm-dialog picker-help-dialog" role="dialog" aria-modal="true" aria-labelledby="folder-help-title">
+          <div className="dialog-head">
+            <span className="dialog-icon"><FolderOpen size={21} /></span>
+            <button className="icon-button" type="button" aria-label="Close folder help" onClick={() => setFolderDialog(null)}><X size={18} /></button>
+          </div>
+          <span className="section-kicker">TIDYDROP FOLDER ACCESS</span>
+          <h2 id="folder-help-title">{folderDialog.title}</h2>
+          <p className="dialog-intro">{folderDialog.detail}</p>
+          <div className="safe-note"><ShieldCheck size={16} /><span>Your files stay on your device. The browser’s own security prompt uses the site address to identify which site requested access.</span></div>
+          <div className="dialog-actions">
+            <button type="button" className="button button-outline" onClick={() => setFolderDialog(null)}>Close</button>
+            <button type="button" className="button button-primary" onClick={() => { setFolderDialog(null); void chooseFolder(); }}><FolderOpen size={16} /> Choose another folder</button>
+          </div>
+        </section>
+      </div>}
 
       {showConfirm && directory && <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !isSorting && setShowConfirm(false)}>
         <section className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
