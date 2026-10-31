@@ -422,19 +422,6 @@ body {
   box-shadow: 8px 8px 0 var(--comic-ink);
 }
 
-.picker-help-dialog {
-  width: min(470px, 100%);
-}
-
-.picker-help-dialog .dialog-actions {
-  flex-wrap: wrap;
-}
-
-.picker-help-dialog .dialog-actions .button-primary {
-  color: #fff;
-  background: var(--comic-blue);
-}
-
 .confirm-dialog > h2 {
   color: var(--comic-ink);
 }
