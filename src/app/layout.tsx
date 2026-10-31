@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./comic.css";
 
 export const metadata: Metadata = {
   title: "TidyDrop | Your folders, in order",

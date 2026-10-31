@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
-  Archive, ArrowRight, Check, CheckCircle2, ChevronRight, CircleAlert, Clock3, Code2,
+  Archive, ArrowRight, Check, CheckCircle2, ChevronRight, CircleAlert, Clock3, Code2, ExternalLink,
   File, FileImage, FileSpreadsheet, FileText, Film, Folder, FolderOpen, HardDrive,
   Image as ImageIcon, LoaderCircle, LockKeyhole, MoreHorizontal, Music2, Package, Presentation,
   RotateCcw, ScanSearch, ShieldCheck, Sparkles, X,
@@ -339,7 +339,13 @@ export default function Home() {
         <div className="privacy-note"><span className="privacy-note-icon"><LockKeyhole size={18} /></span><div><strong>Your folder stays yours</strong><p>TidyDrop runs in your browser. It only reads and moves files after you choose a folder and approve access.</p></div><a href="#top">Got it <ArrowRight size={14} /></a></div>
       </section>}
 
-      <footer className="site-footer"><span>Made for a calmer desktop.</span><span><ShieldCheck size={14} /> Local by default</span></footer>
+      <footer className="site-footer">
+        <span>Made for a calmer desktop.</span>
+        <span className="footer-local"><ShieldCheck size={14} /> Local by default</span>
+        <a className="footer-credit" href="https://x.com/Aish2004Gupta" target="_blank" rel="noopener noreferrer" aria-label="Made by X — Aishwary Gupta on X">
+          Made by <strong>X</strong><ExternalLink size={13} aria-hidden="true" />
+        </a>
+      </footer>
 
       {showConfirm && directory && <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !isSorting && setShowConfirm(false)}>
         <section className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
