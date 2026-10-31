@@ -34,6 +34,7 @@ export interface FileHandle {
 export interface DirectoryHandle {
   kind: "directory";
   name: string;
+  requestPermission?(descriptor: { mode: "read" | "readwrite" }): Promise<PermissionState>;
   values(): AsyncIterable<FileHandle | DirectoryHandle>;
   getFileHandle(name: string, options?: { create?: boolean }): Promise<FileHandle>;
   getDirectoryHandle(name: string, options?: { create?: boolean }): Promise<DirectoryHandle>;

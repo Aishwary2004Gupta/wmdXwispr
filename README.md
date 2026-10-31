@@ -19,6 +19,6 @@ TidyDrop leaves subfolders and their contents untouched. File groups are determi
 
 ## Private by design
 
-TidyDrop works with the folder you select through your browser. File names and contents stay on your device and are not uploaded to TidyDrop. Your browser asks for read and write access when you choose a folder.
+TidyDrop works with the folder you select through your browser. File names and contents stay on your device and are not uploaded to TidyDrop. The browser grants read access when you choose a folder; TidyDrop requests write access only after you confirm the sort.
 
 Folder sorting requires a browser that supports the File System Access API, such as a recent desktop version of Chrome or Edge. Other browsers may not offer the required folder access.

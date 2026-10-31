@@ -28,7 +28,7 @@ interface Notice {
 }
 
 interface FolderPickerWindow extends Window {
-  showDirectoryPicker?: (options: { id: string; mode: "readwrite"; startIn: "downloads" }) => Promise<DirectoryHandle>;
+  showDirectoryPicker?: (options: { id: string; mode: "read" | "readwrite"; startIn: "downloads" }) => Promise<DirectoryHandle>;
 }
 
 const CATEGORY_STYLE: Record<CategoryId, { icon: typeof ImageIcon; tint: string }> = {
@@ -128,7 +128,7 @@ export default function Home() {
       return;
     }
     try {
-      const chosen = await browserWindow.showDirectoryPicker({ id: "tidydrop-folder", mode: "readwrite", startIn: "downloads" });
+      const chosen = await browserWindow.showDirectoryPicker({ id: "tidydrop-folder", mode: "read", startIn: "downloads" });
       await scanFolder(chosen);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") return;
@@ -140,8 +140,35 @@ export default function Home() {
     }
   };
 
+  const requestWriteAccess = async () => {
+    if (!directory?.requestPermission) {
+      setNotice({
+        kind: "error",
+        title: "Write access isn’t available",
+        detail: "This browser can’t grant folder write access. Use a recent desktop version of Chrome or Edge to sort files.",
+      });
+      return false;
+    }
+    try {
+      const permission = await directory.requestPermission({ mode: "readwrite" });
+      if (permission === "granted") return true;
+      setNotice({
+        kind: "info",
+        title: "No files were changed",
+        detail: "TidyDrop needs your browser’s write permission before it can organize files. Allow access when prompted, then try again.",
+      });
+    } catch (error) {
+      setNotice({ kind: "error", title: "TidyDrop couldn’t get write access", detail: errorText(error) });
+    }
+    return false;
+  };
+
   const sortFiles = async () => {
     if (!directory || files.length === 0 || isSorting) return;
+    if (!await requestWriteAccess()) {
+      setShowConfirm(false);
+      return;
+    }
     const sourceFiles = [...files];
     const moved: FileMoveRecord[] = [];
     const failed: string[] = [];
@@ -200,6 +227,7 @@ export default function Home() {
 
   const undoLastSort = async () => {
     if (!undoMoves.length || isUndoing) return;
+    if (!await requestWriteAccess()) return;
     setIsUndoing(true);
     const records = [...undoMoves].reverse();
     let restored = 0;
@@ -232,7 +260,7 @@ export default function Home() {
   };
 
   return (
-    <main className="site-shell">
+    <main className={`site-shell ${directory ? "site-shell-active" : ""}`}>
       <header className="topbar">
         <a className="brand" href="#top" aria-label="TidyDrop home"><span className="brand-mark"><FolderOpen size={21} /></span><span>TidyDrop</span></a>
         <nav className="topbar-actions" aria-label="Main navigation">
@@ -354,8 +382,8 @@ export default function Home() {
       {showConfirm && directory && <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !isSorting && setShowConfirm(false)}>
         <section className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
           <div className="dialog-head"><span className="dialog-icon"><FolderOpen size={21} /></span><button className="icon-button" type="button" aria-label="Close dialog" onClick={() => !isSorting && setShowConfirm(false)} disabled={isSorting}><X size={18} /></button></div>
-          <span className="section-kicker">ONE LAST LOOK</span><h2 id="confirm-title">Sort {files.length.toLocaleString()} files?</h2>
-          <p className="dialog-intro">We’ll create type folders inside <strong>{directory.name}</strong> and move each loose file into its matching folder.</p>
+          <span className="section-kicker">YOUR CONFIRMATION</span><h2 id="confirm-title">Allow TidyDrop to organize these files?</h2>
+          <p className="dialog-intro">We’ll create type folders inside <strong>{directory.name}</strong> and move {files.length.toLocaleString()} loose {files.length === 1 ? "file" : "files"} into their matching folders. Your browser may ask for write access after you confirm.</p>
           <div className="confirm-categories">{activeCategories.map((category) => {
             const style = CATEGORY_STYLE[category.id];
             const Icon = style.icon;
@@ -363,7 +391,7 @@ export default function Home() {
           })}</div>
           <div className="safe-note"><ShieldCheck size={16} /><span>Existing files are kept safe with numbered names. Nested folders are not touched.</span></div>
           {isSorting && <div className="progress-wrap"><div className="progress-label"><span>Sorting files…</span><span>{sortProgress} / {files.length}</span></div><div className="progress-track"><span style={{ width: `${files.length ? (sortProgress / files.length) * 100 : 0}%` }} /></div></div>}
-          <div className="dialog-actions"><button type="button" className="button button-outline" onClick={() => setShowConfirm(false)} disabled={isSorting}>Go back</button><button type="button" className="button button-primary" onClick={sortFiles} disabled={isSorting || files.length === 0}>{isSorting ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}{isSorting ? "Sorting…" : "Yes, sort these files"}</button></div>
+          <div className="dialog-actions"><button type="button" className="button button-outline" onClick={() => setShowConfirm(false)} disabled={isSorting}>Don’t allow</button><button type="button" className="button button-primary" onClick={sortFiles} disabled={isSorting || files.length === 0}>{isSorting ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}{isSorting ? "Sorting…" : "Allow and sort"}</button></div>
           <p className="dialog-footnote"><Clock3 size={13} /> Keep this tab open while a large folder is sorting.</p>
         </section>
       </div>}
